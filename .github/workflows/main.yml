@@ -17,7 +17,6 @@ jobs:
         run: |
           ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" | head -n 1)
           if [ -n "$ZIP_FILE" ]; then
-            echo "Extraindo $ZIP_FILE..."
             unzip -o "$ZIP_FILE" -d temp_extract
             INNER_DIR=$(find temp_extract -mindepth 1 -maxdepth 1 -type d | head -n 1)
             if [ -n "$INNER_DIR" ] && [ -f "$INNER_DIR/settings.gradle.kts" -o -f "$INNER_DIR/settings.gradle" ]; then
@@ -34,46 +33,10 @@ jobs:
           MAIN_ACT=$(grep -rl "class MainActivity" app/src/main/java app/src/main/kotlin 2>/dev/null | head -n 1 | sed -E 's|.*(java|kotlin)/||; s|\.kt$||; s|\.java$||; s|/|.|g')
           [ -z "$MAIN_ACT" ] && MAIN_ACT="com.raylan.telaesticada.MainActivity"
           SVC_ACT=$(grep -rl "Service()" app/src/main/java app/src/main/kotlin 2>/dev/null | head -n 1 | sed -E 's|.*(java|kotlin)/||; s|\.kt$||; s|\.java$||; s|/|.|g')
-
-          cat <<EOF > app/src/main/AndroidManifest.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://android.com">
-              <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-              <queries>
-                  <package android:name="com.dts.freefireth" />
-                  <package android:name="com.dts.freefiremax" />
-                  <package android:name="moe.shizuku.privileged.api" />
-                  <package android:name="me.piebridge.brevent" />
-              </queries>
-              <application
-                  android:allowBackup="true"
-                  android:label="Tela Esticada FF"
-                  android:supportsRtl="true"
-                  android:theme="@android:style/Theme.Material.NoActionBar">
-                  <activity
-                      android:name="$MAIN_ACT"
-                      android:exported="true">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-                  </activity>
-          EOF
-
-          if [ -n "$SVC_ACT" ]; then
-            echo "        <service android:name=\"$SVC_ACT\" android:exported=\"false\" android:foregroundServiceType=\"specialUse\" />" >> app/src/main/AndroidManifest.xml
-          fi
-
-          echo "    </application>" >> app/src/main/AndroidManifest.xml
-          echo "</manifest>" >> app/src/main/AndroidManifest.xml
-
-          find . -name "build.gradle*" -exec sed -i '/google-services/d' {} +
-          find . -name "build.gradle*" -exec sed -i '/\.gms\./d' {} +
-          find . -name "build.gradle*" -exec sed -i '/gms/d' {} +
-          find . -name "build.gradle*" -exec sed -i '/secrets-gradle-plugin/d' {} +
-          find . -name "build.gradle*" -exec sed -i '/debug\.keystore/d' {} +
+          SVC_TAG=""
+          [ -n "$SVC_ACT" ] && SVC_TAG="<service android:name=\"$SVC_ACT\" android:exported=\"false\" android:foregroundServiceType=\"specialUse\" />"
+          printf '<?xml version="1.0" encoding="utf-8"?>\n<manifest xmlns:android="http://android.com">\n  <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />\n  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\n  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />\n  <queries>\n    <package android:name="com.dts.freefireth" />\n    <package android:name="com.dts.freefiremax" />\n    <package android:name="moe.shizuku.privileged.api" />\n    <package android:name="me.piebridge.brevent" />\n  </queries>\n  <application android:allowBackup="true" android:label="Tela Esticada FF" android:supportsRtl="true" android:theme="@android:style/Theme.Material.NoActionBar">\n    <activity android:name="%s" android:exported="true">\n      <intent-filter>\n        <action android:name="android.intent.action.MAIN" />\n        <category android:name="android.intent.category.LAUNCHER" />\n      </intent-filter>\n    </activity>\n    %s\n  </application>\n</manifest>\n' "$MAIN_ACT" "$SVC_TAG" > app/src/main/AndroidManifest.xml
+          find . -name "build.gradle*" -exec sed -i '/google-services/d; /\.gms\./d; /gms/d; /secrets-gradle-plugin/d; /debug\.keystore/d' {} +
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -87,7 +50,7 @@ jobs:
           gradle-version: '9.3.1'
 
       - name: Build Debug APK
-        run: gradle assembleDebug --no-daemon --stacktrace
+        run: gradle assembleDebug --no-daemon
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
