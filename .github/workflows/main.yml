@@ -30,7 +30,45 @@ jobs:
 
       - name: Fix AndroidManifest and Template Cleanup
         run: |
-          python3 -c 'import glob, re; [open(p, "w").write(re.sub(r"(\s)(name|exported|label|theme|icon|roundIcon|allowBackup|supportsRtl|foregroundServiceType|permission|targetPackage|resource|value)=", r"\1android:\2=", open(p).read()).replace("android:android:", "android:")) for p in glob.glob("**/AndroidManifest.xml", recursive=True)]'
+          mkdir -p app/src/main
+          MAIN_ACT=$(grep -rl "class MainActivity" app/src/main/java app/src/main/kotlin 2>/dev/null | head -n 1 | sed -E 's|.*(java|kotlin)/||; s|\.kt$||; s|\.java$||; s|/|.|g')
+          [ -z "$MAIN_ACT" ] && MAIN_ACT="com.raylan.telaesticada.MainActivity"
+          SVC_ACT=$(grep -rl "Service()" app/src/main/java app/src/main/kotlin 2>/dev/null | head -n 1 | sed -E 's|.*(java|kotlin)/||; s|\.kt$||; s|\.java$||; s|/|.|g')
+
+          cat <<EOF > app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://android.com">
+              <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+              <queries>
+                  <package android:name="com.dts.freefireth" />
+                  <package android:name="com.dts.freefiremax" />
+                  <package android:name="moe.shizuku.privileged.api" />
+                  <package android:name="me.piebridge.brevent" />
+              </queries>
+              <application
+                  android:allowBackup="true"
+                  android:label="Tela Esticada FF"
+                  android:supportsRtl="true"
+                  android:theme="@android:style/Theme.Material.NoActionBar">
+                  <activity
+                      android:name="$MAIN_ACT"
+                      android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+          EOF
+
+          if [ -n "$SVC_ACT" ]; then
+            echo "        <service android:name=\"$SVC_ACT\" android:exported=\"false\" android:foregroundServiceType=\"specialUse\" />" >> app/src/main/AndroidManifest.xml
+          fi
+
+          echo "    </application>" >> app/src/main/AndroidManifest.xml
+          echo "</manifest>" >> app/src/main/AndroidManifest.xml
+
           find . -name "build.gradle*" -exec sed -i '/google-services/d' {} +
           find . -name "build.gradle*" -exec sed -i '/\.gms\./d' {} +
           find . -name "build.gradle*" -exec sed -i '/gms/d' {} +
