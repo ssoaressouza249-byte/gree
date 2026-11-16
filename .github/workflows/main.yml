@@ -1,0 +1,50 @@
+name: Build GreenCore AI APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Unpack ZIP project if uploaded zipped
+        run: |
+          ZIP_FILE=$(find . -maxdepth 2 -name "*.zip" | head -n 1)
+          if [ -n "$ZIP_FILE" ]; then
+            echo "Descompactando $ZIP_FILE..."
+            unzip -o "$ZIP_FILE" -d temp_project
+            SUBDIR=$(find temp_project -mindepth 1 -maxdepth 1 -type d | head -n 1)
+            if [ -f "$SUBDIR/settings.gradle.kts" ] || [ -f "$SUBDIR/build.gradle.kts" ]; then
+              cp -rf "$SUBDIR"/* .
+            else
+              cp -rf temp_project/* .
+            fi
+            rm -rf temp_project "$ZIP_FILE"
+          fi
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Gradle 9.3.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+
+      - name: Build Debug APK
+        run: gradle assembleDebug --no-daemon --stacktrace
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GreenCore-AI-Debug-APK
+          path: app/build/outputs/apk/debug/*.apk
+          
