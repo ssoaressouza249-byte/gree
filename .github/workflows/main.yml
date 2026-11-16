@@ -46,6 +46,8 @@ jobs:
           fi
 
           find . -name "build.gradle*" -exec sed -i '/google-services/d' {} +
+          find . -name "build.gradle*" -exec sed -i '/\.gms\./d' {} +
+          find . -name "build.gradle*" -exec sed -i '/gms/d' {} +
           find . -name "build.gradle*" -exec sed -i '/secrets-gradle-plugin/d' {} +
           find . -name "build.gradle*" -exec sed -i '/debug\.keystore/d' {} +
 
