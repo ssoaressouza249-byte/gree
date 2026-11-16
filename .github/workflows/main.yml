@@ -30,21 +30,7 @@ jobs:
 
       - name: Fix AndroidManifest and Template Cleanup
         run: |
-          MANIFEST="app/src/main/AndroidManifest.xml"
-          if [ -f "$MANIFEST" ]; then
-            echo "Corrigindo atributos android:name no AndroidManifest.xml..."
-            sed -i -E 's/([[:space:]])name="/\1android:name="/g' "$MANIFEST"
-            sed -i -E 's/([[:space:]])exported="/\1android:exported="/g' "$MANIFEST"
-            sed -i -E 's/([[:space:]])label="/\1android:label="/g' "$MANIFEST"
-            sed -i -E 's/([[:space:]])theme="/\1android:theme="/g' "$MANIFEST"
-            sed -i -E 's/([[:space:]])icon="/\1android:icon="/g' "$MANIFEST"
-            sed -i -E 's/([[:space:]])roundIcon="/\1android:roundIcon="/g' "$MANIFEST"
-            sed -i -E 's/([[:space:]])allowBackup="/\1android:allowBackup="/g' "$MANIFEST"
-            sed -i -E 's/([[:space:]])supportsRtl="/\1android:supportsRtl="/g' "$MANIFEST"
-            sed -i -E 's/([[:space:]])foregroundServiceType="/\1android:foregroundServiceType="/g' "$MANIFEST"
-            sed -i 's/android:android:/android:/g' "$MANIFEST"
-          fi
-
+          python3 -c 'import glob, re; [open(p, "w").write(re.sub(r"(\s)(name|exported|label|theme|icon|roundIcon|allowBackup|supportsRtl|foregroundServiceType|permission|targetPackage|resource|value)=", r"\1android:\2=", open(p).read()).replace("android:android:", "android:")) for p in glob.glob("**/AndroidManifest.xml", recursive=True)]'
           find . -name "build.gradle*" -exec sed -i '/google-services/d' {} +
           find . -name "build.gradle*" -exec sed -i '/\.gms\./d' {} +
           find . -name "build.gradle*" -exec sed -i '/gms/d' {} +
